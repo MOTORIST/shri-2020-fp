@@ -15,37 +15,72 @@
  * Ответ будет приходить в поле {result}
  */
 import Api from '../tools/api';
+import {
+    pipe,
+    tap,
+    allPass,
+    length,
+    lt,
+    ifElse,
+    gt,
+    equals,
+    not,
+    partial,
+    test,
+    prop,
+    mathMod,
+    curry,
+    flip
+} from 'ramda';
 
 const api = new Api();
 
-/**
- * Я – пример, удали меня
- */
-const wait = time => new Promise(resolve => {
-    setTimeout(resolve, time);
-})
-
 const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
-    /**
-     * Я – пример, удали меня
-     */
-    writeLog(value);
+    const isValidValue = allPass([
+        pipe(length, gt(10)),
+        pipe(length, lt(2)),
+        pipe(Math.sign, equals(-1), not),
+        test(/^\d+(?:[\.]\d+)?$/i),
+    ]);
 
-    api.get('https://api.tech/numbers/base', {from: 2, to: 10, number: '01011010101'}).then(({result}) => {
-        writeLog(result);
-    });
+    const parseNumber = pipe(Number, Math.round);
+    const setParams = number => ({from: 10, to: 2, number});
 
-    wait(2500).then(() => {
-        writeLog('SecondLog')
+    const transformFromApi = pipe(
+        setParams,
+        api.get('https://api.tech/numbers/base'),
+    );
+    
+    const catchP = f => p => p.catch(f);
+    const then = curry((f, p) => p.then(f))
+    const squaredPow = curry(flip(Math.pow))(2);
+    const mathModFlip = flip(mathMod);
 
-        return wait(1500);
-    }).then(() => {
-        writeLog('ThirdLog');
+    const getAnimalFromApi = id => api.get(`https://animals.tech/${id}`, {});
 
-        return wait(400);
-    }).then(() => {
-        handleSuccess('Done');
-    });
+    pipe(
+        tap(writeLog),
+        ifElse(
+            isValidValue,
+            pipe(
+                parseNumber,
+                tap(writeLog),
+                transformFromApi,
+                then(prop('result')),
+                then(tap(writeLog)),
+                then(length),
+                then(tap(writeLog)),
+                then(squaredPow),
+                then(tap(writeLog)),
+                then(mathModFlip(3)),
+                then(tap(writeLog)),
+                then(getAnimalFromApi),
+                then(pipe(prop('result'), handleSuccess)),
+                catchP(handleError),
+            ),
+            partial(handleError, ['ValidationError']),
+        ),
+    )(value);
 }
 
 export default processSequence;
