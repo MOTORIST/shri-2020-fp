@@ -1,3 +1,27 @@
+import { COLORS, SHAPES } from '../constants';
+import {
+    allPass,
+    filter,
+    values,
+    length,
+    pipe,
+    equals,
+    lte,
+    invert,
+    countBy,
+    identity,
+    whereEq,
+    omit,
+    indexOf,
+    any,
+    has,
+    all,
+    and,
+    not,
+    compose,
+    anyPass
+} from 'ramda';
+
 /**
  * @file Домашка по FP ч. 1
  * 
@@ -14,37 +38,92 @@
  */
 
 // 1. Красная звезда, зеленый квадрат, все остальные белые.
-export const validateFieldN1 = ({star, square, triangle, circle}) => {
-    if (triangle !== 'white' || circle !== 'white') {
-        return false;
+export const validateFieldN1 = (shapes) => {
+    const standard = {
+        [SHAPES.STAR]: COLORS.RED,
+        [SHAPES.SQUARE]: COLORS.GREEN,
+        [SHAPES.TRIANGLE]: COLORS.WHITE,
+        [SHAPES.CIRCLE]: COLORS.WHITE,
     }
 
-    return star === 'red' && square === 'green';
+    const isStandardShapes = equals(standard);
+
+    return isStandardShapes(shapes);
 };
 
 // 2. Как минимум две фигуры зеленые.
-export const validateFieldN2 = () => false;
+export const validateFieldN2 = (shapes) => {
+    const isGreenColors = filter(equals(COLORS.GREEN));
+    const isMinTwoGreenShapes = pipe(values, isGreenColors, length, lte(2));
+
+    return isMinTwoGreenShapes(shapes);
+}
 
 // 3. Количество красных фигур равно кол-ву синих.
-export const validateFieldN3 = () => false;
+export const validateFieldN3 = (shapes) => {
+    const isRedEqualsBlue = ({red, blue}) => red === blue;
+    const isEqualRedShapesAndBlueShapes = pipe(values, countBy(identity), isRedEqualsBlue);
+
+    return isEqualRedShapesAndBlueShapes(shapes);
+};
 
 // 4. Синий круг, красная звезда, оранжевый квадрат
-export const validateFieldN4 = () => false;
+export const validateFieldN4 = (shapes) => {
+    const standard = {
+        [SHAPES.CIRCLE]: COLORS.BLUE,
+        [SHAPES.STAR]: COLORS.RED,
+        [SHAPES.SQUARE]: COLORS.ORANGE,
+    }
+
+    const isStandardShapes = whereEq(standard);
+    
+    return isStandardShapes(shapes);
+}
 
 // 5. Три фигуры одного любого цвета кроме белого (четыре фигуры одного цвета – это тоже true).
-export const validateFieldN5 = () => false;
+export const validateFieldN5 = (shapes) => {
+    const gteThree = v => v >= 3;
+
+    return pipe(values, countBy(identity), omit([COLORS.WHITE]), values, any(gteThree))(shapes);
+}
 
 // 6. Две зеленые фигуры (одна из них треугольник), еще одна любая красная.
-export const validateFieldN6 = () => false;
+export const validateFieldN6 = (shapes) => {
+    const colors = invert(shapes);
+    const hasTriangleGreenShapes = colors => indexOf(SHAPES.TRIANGLE, colors[COLORS.GREEN]) === 1;
+    const hasGreenShapes = has(COLORS.GREEN);
+    const hasRedShapes = has(COLORS.RED);
+    
+    return allPass([hasGreenShapes, hasTriangleGreenShapes, hasRedShapes])(colors);
+}
 
 // 7. Все фигуры оранжевые.
-export const validateFieldN7 = () => false;
+export const validateFieldN7 = (shapes) => {
+    const isOrange = equals(COLORS.ORANGE);
+
+    return pipe(values, all(isOrange))(shapes);
+}
 
 // 8. Не красная и не белая звезда.
-export const validateFieldN8 = () => false;
+export const validateFieldN8 = ({ star }) => {
+    const isWhite = equals(COLORS.WHITE);
+    const isRed = equals(COLORS.RED);
+
+    return compose(not, anyPass([isWhite, isRed]))(star);
+}
 
 // 9. Все фигуры зеленые.
-export const validateFieldN9 = () => false;
+export const validateFieldN9 = (shapes) => {
+    const isOrange = equals(COLORS.GREEN);
+
+    return pipe(values, all(isOrange))(shapes);
+}
 
 // 10. Треугольник и квадрат одного цвета (не белого)
-export const validateFieldN10 = () => false;
+export const validateFieldN10 = ({triangle, square}) => {
+    const isNotWhite = compose(not, equals(COLORS.WHITE));
+    const isNotWhiteAll = all(isNotWhite)([triangle, square]);
+    const isEquals = equals(triangle, square);
+
+    return and(isNotWhiteAll, isEquals);
+}
